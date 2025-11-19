@@ -1,48 +1,52 @@
 """
-Database Schemas
+Database Schemas for FindRival (MVP v1.0)
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model represents a collection in MongoDB. Class name lowercased
+is used as the collection name by convention.
 """
-
+from __future__ import annotations
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import List, Optional, Literal, Dict, Any
 
-# Example schemas (replace with your own):
+class GeoPoint(BaseModel):
+    type: Literal["Point"] = "Point"
+    coordinates: List[float] = Field(..., min_items=2, max_items=2, description="[lng, lat]")
 
-class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+class Availability(BaseModel):
+    days: List[Literal["mon","tue","wed","thu","fri","sat","sun"]] = []
+    timeslot: Optional[Literal["morning","afternoon","evening","any"]] = "any"
 
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+class Team(BaseModel):
+    owner_uid: str = Field(..., description="Firebase Auth user UID for the team owner")
+    name: str
+    sport: Literal["soccer","basketball","tennis","cricket","volleyball","badminton","rugby","hockey","other"]
+    location: GeoPoint
+    address: Optional[str] = None
+    players: List[str] = []
+    availability: Availability = Availability()
+    device_tokens: List[str] = []
 
-# Add your own schemas here:
-# --------------------------------------------------
+class MatchRequest(BaseModel):
+    from_team_id: str
+    to_team_id: str
+    status: Literal["pending","accepted","rejected","confirmed"] = "pending"
+    proposed_time: Optional[str] = None
+    notes: Optional[str] = None
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+# Response models (lightweight)
+class TeamPublic(BaseModel):
+    id: str
+    name: str
+    sport: str
+    location: Dict[str, Any]
+    address: Optional[str] = None
+    players: List[str] = []
+    availability: Availability = Availability()
+
+class MatchRequestPublic(BaseModel):
+    id: str
+    from_team_id: str
+    to_team_id: str
+    status: str
+    proposed_time: Optional[str] = None
+    notes: Optional[str] = None
